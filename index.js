@@ -1,7 +1,8 @@
 const express = require('express')
+var morgan = require('morgan')
 const app = express()
 
-app.use(express.json())
+
 
 let persons = [
     { 
@@ -26,6 +27,26 @@ let persons = [
     }
 ]
 
+const requestLogger = (request, response, next) => {
+  console.log('---')  
+  console.log('Method:', request.method)
+  console.log('Path: ', request.path)
+  console.log('---')
+  next()
+}
+
+const unkownEndpoint = (request, response) => {
+  response.status(404).send({error: 'Unknown endpoint'})
+}
+
+app.use(express.json())
+app.use(requestLogger)
+// console.log("using morgan")
+// app.use(morgan('tiny'))
+morgan.token('body', function (req, res) { return JSON.stringify(req.body) })
+
+app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
+
 app.get('/',(request, response) => {
     response.send('<h1>Hello World!</h1><p><a href="/api/persons">persons</a><p> <p><a href="/info">info</a><p>')
 })
@@ -43,7 +64,6 @@ app.get('/api/persons/:id', (request, response)=>{
         response.statusMessage = `person with id ${id} not found`;
         response.status(404).end()
     }
-    
 })
 
 app.get('/info', (request, response) => {
@@ -52,42 +72,54 @@ app.get('/info', (request, response) => {
     response.send(`<p>Phonebook has info for ${personsCount} people</p><p>${date}</p>`)
   })
 
-// const generateId = () => {
-//     const maxId = notes.length > 0
-//       ? Math.max(...notes.map(n => Number(n.id)))
-//       : 0
-//     return String(maxId + 1)
-// }
+const generateId = () => {
+    // const maxId = notes.length > 0
+    //   ? Math.max(...notes.map(n => Number(n.id)))
+    //   : 0
 
-// app.post('/api/notes', (request, response) => {
+    const id = Math.random()*10000
+
+    return String(Math.floor(id))
+}
+
+app.post('/api/persons', (request, response) => {
     
-//     const body = request.body
+    const body = request.body
 
-//     if (!body.content) {
-//         return response.status(400).json({
-//             error: 'content missing'
-//         })
-//     }
+    if (!body.name || !body.number) {
+        return response.status(400).json({
+            error: 'content missing'
+        })
+    }
 
-//     const note = {
-//         content: body.content,
-//         important: Boolean(body.important) || false,
-//         id: generateId()
-//     }
+    const nameAlreadyUsed = persons.some(person => person.name === body.name)
     
-//     notes = notes.concat(note)
+    if(nameAlreadyUsed){
+      return response.status(400).json({
+      error: 'Name must be unique'
+      })
+    }
 
-//     console.log("Note:",note)
-//     response.json(note)
-//   })
+    const person = {
+        name: body.name,
+        number: body.number,
+        id: generateId()
+    }
+    
+    persons = persons.concat(person)
 
-// app.delete('/api/notes/:id', (request, response) => {
-//     const id = request.params.id
-//     notes = notes.filter(note => note.id !== id)
+    // console.log("Person:",person)
+    response.json(person)
+  })
 
-//     response.status(204).end()
-//   })
+app.delete('/api/persons/:id', (request, response) => {
+    const id = request.params.id
+    notes = notes.filter(note => note.id !== id)
 
+    response.status(204).end()
+  })
+
+app.use(unkownEndpoint)
 const PORT = 3001
 app.listen(PORT, ()=> {
     console.log(`Server running on port ${PORT}`)
