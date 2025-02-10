@@ -2,6 +2,8 @@ const express = require('express')
 var morgan = require('morgan')
 const app = express()
 
+const cors = require('cors')
+app.use(cors())
 
 
 let persons = [
@@ -52,6 +54,7 @@ app.get('/',(request, response) => {
 })
 
 app.get('/api/persons', (request, response) => {
+    console.log("Request received")
     response.json(persons)
   })
 
@@ -120,7 +123,7 @@ app.delete('/api/persons/:id', (request, response) => {
   })
 
 app.use(unkownEndpoint)
-const PORT = 3001
+const PORT = process.env.PORT || 3001
 app.listen(PORT, ()=> {
     console.log(`Server running on port ${PORT}`)
 })
