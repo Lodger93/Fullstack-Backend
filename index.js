@@ -1,34 +1,15 @@
 const express = require('express')
+require('dotenv').config()
 var morgan = require('morgan')
 const app = express()
+
+const Person = require('./models/person')
+
 
 const cors = require('cors')
 app.use(cors())
 app.use(express.static('dist'))
 
-
-let persons = [
-    { 
-      "id": "1",
-      "name": "Arto Hellas", 
-      "number": "040-123456"
-    },
-    { 
-      "id": "2",
-      "name": "Ada Lovelace", 
-      "number": "39-44-5323523"
-    },
-    { 
-      "id": "3",
-      "name": "Dan Abramov", 
-      "number": "12-43-234345"
-    },
-    { 
-      "id": "4",
-      "name": "Mary Poppendieck", 
-      "number": "39-23-6423122"
-    }
-]
 
 const requestLogger = (request, response, next) => {
   console.log('---')  
@@ -56,35 +37,23 @@ app.get('/',(request, response) => {
 
 app.get('/api/persons', (request, response) => {
     console.log("Request received")
-    response.json(persons)
+    Person.find({}).then(persons => {
+      response.json(persons)
+      })
   })
 
 app.get('/api/persons/:id', (request, response)=>{
-    const id = request.params.id
-    const person = persons.find(person => person.id === id)
-    if (person) {
-        response.json(person)
-    } else {
-        response.statusMessage = `person with id ${id} not found`;
-        response.status(404).end()
-    }
+    Person.findById(request.params.id).then(person => {
+      response.json(person)
+    })
 })
 
-app.get('/info', (request, response) => {
-    const date = new Date()
-    const personsCount = persons.length
-    response.send(`<p>Phonebook has info for ${personsCount} people</p><p>${date}</p>`)
-  })
+// app.get('/info', (request, response) => {
+//     const date = new Date()
+//     const personsCount = persons.length
+//     response.send(`<p>Phonebook has info for ${personsCount} people</p><p>${date}</p>`)
+//   })
 
-const generateId = () => {
-    // const maxId = notes.length > 0
-    //   ? Math.max(...notes.map(n => Number(n.id)))
-    //   : 0
-
-    const id = Math.random()*10000
-
-    return String(Math.floor(id))
-}
 
 app.post('/api/persons', (request, response) => {
     
@@ -96,35 +65,35 @@ app.post('/api/persons', (request, response) => {
         })
     }
 
-    const nameAlreadyUsed = persons.some(person => person.name === body.name)
+    // const nameAlreadyUsed = persons.some(person => person.name === body.name)
     
-    if(nameAlreadyUsed){
-      return response.status(400).json({
-      error: 'Name must be unique'
-      })
-    }
+    // if(nameAlreadyUsed){
+    //   return response.status(400).json({
+    //   error: 'Name must be unique'
+    //   })
+    // }
 
-    const person = {
-        name: body.name,
-        number: body.number,
-        id: generateId()
-    }
+    const person = new Person({
+      name: body.name,
+      number: body.number,
+    })
+
+    person.save().then(savedPerson=> {
+      response.json(savedPerson)
+    })
     
-    persons = persons.concat(person)
-
-    // console.log("Person:",person)
-    response.json(person)
   })
 
-app.delete('/api/persons/:id', (request, response) => {
-    const id = request.params.id
-    notes = notes.filter(note => note.id !== id)
+// app.delete('/api/persons/:id', (request, response) => {
+//     const id = request.params.id
+//     notes = notes.filter(note => note.id !== id)
 
-    response.status(204).end()
-  })
+//     response.status(204).end()
+//   })
 
 app.use(unkownEndpoint)
-const PORT = process.env.PORT || 3001
+
+const PORT = process.env.PORT
 app.listen(PORT, ()=> {
     console.log(`Server running on port ${PORT}`)
 })
